@@ -17,7 +17,7 @@ add_log()
 check_answer_site()
 {
     local answer="$1"
-    local valid_codes="$VALID_VALUES"
+    local valid_codes="200 201 204"
 
     for code in $valid_codes; do
         if [ "$answer" -eq "$code" ] 2>/dev/null; then
@@ -58,34 +58,66 @@ find_process_pid()
     awk 'NR==1 {print $2}'
 }
 
+get_previous_pid()
+{
+    if [ -f "$PID_FILE" ]; then
+        tail -n 1 "$PID_FILE" 2>/dev/null
+    else
+        echo ""
+    fi
+}
+
+check_process_restart()
+{
+    local current_pid="$1"
+    local previous_pid="$2"
+    
+    if [ -n "$previous_pid" ] && [ "$current_pid" != "$previous_pid" ]; then
+        add_log "INFO: Process \"$PROCESS_NAME\" was restarted. Old PID: $previous_pid, New PID: $current_pid"
+        return 0
+    else
+        return 1
+    fi
+}
+
+handle_running_process()
+{
+    local current_pid="$1"
+    local previous_pid="$2"
+    
+    check_process_restart "$current_pid" "$previous_pid"
+    
+    if ! send_request; then
+        true
+    fi
+    
+    echo "$current_pid" >> "$PID_FILE"
+}
+
+handle_stopped_process()
+{
+    if [ -f "$PID_FILE" ]; then
+        rm -f "$PID_FILE"
+    fi
+}
+
+process_monitoring_logic()
+{
+    local current_pid="$1"
+    
+    if [ -n "$current_pid" ] && [[ "$current_pid" =~ ^[0-9]+$ ]]; then
+        handle_running_process "$current_pid" "$(get_previous_pid)"
+    else
+        handle_stopped_process
+    fi
+}
+
 main()
 {
     local current_pid
-    local previous_pid
     
     current_pid=$(find_process_pid)
-    
-    if [ -f "$PID_FILE" ]; then
-        previous_pid=$(tail -n 1 "$PID_FILE" 2>/dev/null)
-    else
-        previous_pid=""
-    fi
-    
-    if [ -n "$current_pid" ] && [[ "$current_pid" =~ ^[0-9]+$ ]]; then
-        if [ -n "$previous_pid" ] && [ "$current_pid" != "$previous_pid" ]; then
-            add_log "INFO: Process \"$PROCESS_NAME\" was restarted. Old PID: $previous_pid, New PID: $current_pid"
-        fi
-        
-        if ! send_request; then
-            true
-        fi
-        
-        echo "$current_pid" >> "$PID_FILE"
-    else
-        if [ -f "$PID_FILE" ]; then
-            rm -f "$PID_FILE"
-        fi
-    fi
+    process_monitoring_logic "$current_pid"
 }
 
 main
