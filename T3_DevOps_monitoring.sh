@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONFIG_FILE="T3_DevOps_config.conf"
+CONFIG_FILE="/etc/monitoring/T3_DevOps_config.conf"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "ERROR: Configuration file $CONFIG_FILE not found!" >&2
@@ -41,7 +41,6 @@ send_request()
     fi
 
     if check_answer_site "$answer"; then
-        add_log "INFO: Server responded with HTTP $answer"
         return 0
     else
         add_log "ERROR: Monitoring server unavailable. HTTP response: $answer"
@@ -80,6 +79,16 @@ check_process_restart()
     fi
 }
 
+save_current_pid()
+{
+    local current_pid="$1"
+    local previous_pid="$2"
+    
+    if [ -z "$previous_pid" ] || [ "$current_pid" != "$previous_pid" ]; then
+        echo "$current_pid" >> "$PID_FILE"
+    fi
+}
+
 handle_running_process()
 {
     local current_pid="$1"
@@ -91,7 +100,7 @@ handle_running_process()
         true
     fi
     
-    echo "$current_pid" >> "$PID_FILE"
+    save_current_pid "$current_pid" "$previous_pid"
 }
 
 handle_stopped_process()
@@ -104,9 +113,12 @@ handle_stopped_process()
 process_monitoring_logic()
 {
     local current_pid="$1"
+    local previous_pid
     
+    previous_pid=$(get_previous_pid)
+
     if [ -n "$current_pid" ] && [[ "$current_pid" =~ ^[0-9]+$ ]]; then
-        handle_running_process "$current_pid" "$(get_previous_pid)"
+        handle_running_process "$current_pid" "$previous_pid"
     else
         handle_stopped_process
     fi
