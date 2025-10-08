@@ -51,56 +51,6 @@ chmod +x install.sh uninstall.sh T3_DevOps_monitoring.sh
 
 # Установить
 sudo ./install.sh
-
-
-# Скопировать файлы
-sudo mkdir -p /etc/monitoring
-sudo cp T3_DevOps_monitoring.sh /usr/local/bin/
-sudo cp T3_DevOps_config.conf /etc/monitoring/
-sudo chmod +x /usr/local/bin/T3_DevOps_monitoring.sh
-
-# Создать процесс test (обязательно!)
-sudo tee /usr/local/bin/test << 'EOF'
-#!/bin/bash
-while true; do sleep 60; done
-EOF
-sudo chmod +x /usr/local/bin/test
-/usr/local/bin/test &
-
-# Создать systemd файлы
-sudo tee /etc/systemd/system/T3_DevOps_monitoring.service > /dev/null << EOF
-[Unit]
-Description=T3 DevOps Monitoring Service
-After=network.target
-
-[Service]
-Type=oneshot
-User=root
-ExecStart=/usr/local/bin/T3_DevOps_monitoring.sh
-Environment=CONFIG_FILE=/etc/monitoring/T3_DevOps_config.conf
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo tee /etc/systemd/system/T3_DevOps_monitoring.timer > /dev/null << EOF
-[Unit]
-Description=Run T3 DevOps monitoring every minute
-Requires=T3_DevOps_monitoring.service
-
-[Timer]
-OnCalendar=*:*:00
-AccuracySec=1s
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-EOF
-
-# Запустить сервис
-sudo systemctl daemon-reload
-sudo systemctl enable T3_DevOps_monitoring.timer
-sudo systemctl start T3_DevOps_monitoring.timer
 ```
 
 ## Конфигурация 
