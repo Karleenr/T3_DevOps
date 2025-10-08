@@ -159,9 +159,9 @@ sudo systemctl start T3_DevOps_monitoring.timer
 Ошибка сети	           Curl exit code ≠ 0	     ERROR: Curl failed with exit code...
 ```
 
-![До ребута](screenshots/before_reboot.png)
+![До ребута](/sсreenshots/before_reboot.png)
 
-![После ребута](screenshots/after_reboot.png)
+![После ребута](/sсreenshots/after_reboot.png)
 
 ### Команды для проверка
 
